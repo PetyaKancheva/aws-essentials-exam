@@ -7,7 +7,7 @@ export class RegularExamStack extends Stack {
   constructor(scope: Construct, id: string, props?: StackProps) {
     super(scope, id, props);
 
-    const newConst = "const";
+ 
 
   }
 }
