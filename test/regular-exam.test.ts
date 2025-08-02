@@ -1,17 +1,17 @@
-// import * as cdk from 'aws-cdk-lib';
-// import { Template } from 'aws-cdk-lib/assertions';
-// import * as RegularExam from '../lib/regular-exam-stack';
+ 
+
+import { App } from "aws-cdk-lib";
+import { RegularExamStack } from "../lib/regular-exam-stack";
+import { Template } from "aws-cdk-lib/assertions";
 
 // example test. To run these tests, uncomment this file along with the
 // example resource in lib/regular-exam-stack.ts
 test('SQS Queue Created', () => {
-//   const app = new cdk.App();
-//     // WHEN
-//   const stack = new RegularExam.RegularExamStack(app, 'MyTestStack');
-//     // THEN
-//   const template = Template.fromStack(stack);
-
-//   template.hasResourceProperties('AWS::SQS::Queue', {
-//     VisibilityTimeout: 300
-//   });
+  const app = new App();
+    
+  const stack = new  RegularExamStack(app, 'MyTestStack');
+    
+  const template = Template.fromStack(stack);
+  
+    // 
 });
