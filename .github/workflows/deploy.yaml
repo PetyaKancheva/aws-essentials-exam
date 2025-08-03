@@ -39,6 +39,6 @@ jobs:
           echo "deploy sucessful"
       - name: Test stack
         run: |
-          nmp run test
+          npm run test
           echo "test sucessful"
 
