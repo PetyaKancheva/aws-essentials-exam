@@ -35,7 +35,7 @@ jobs:
          echo "synth sucessful"
       - name: Deploy   stack
         run: |
-          cdk deploy --all 
+          cdk deploy --require-approval never
           echo "deploy sucessful"
       - name: Test stack
         run: |
