@@ -76,6 +76,29 @@ const invalidDataLambda= new NodejsFunction(this,"InvalidDataLambda",{
     // grant permission to lambda for table
      table.grantFullAccess(invalidDataLambda);
 
+   // SNS for deletion of item
+      const deletionDataTopic = new Topic(this,"DeletionDataTopic");
+       new Subscription(this,"DeletionDataSubscription",{
+        topic: deletionDataTopic,
+        protocol:  SubscriptionProtocol.EMAIL,
+        endpoint: email
+      });
+
+    // labda to delete the item after 24hrs
+const dataDeletionLambda= new NodejsFunction(this,"DataDeletionLambda",{
+      runtime:Runtime.NODEJS_20_X,
+      entry:__dirname +`/../src/DataDeletionLambda.ts`,
+      handler:'handler',
+      environment:{
+      TABLE_NAME:table.tableName,
+      DELETION_TOPIC_ARN:deletionDataTopic.topicArn
+      
+      }
+    });
+
+     // grant permission to lambda for table
+     table.grantFullAccess(dataDeletionLambda);
+
         // API with resource and  post method
     const sisiApi=new RestApi(this,"SisiApi",{
       restApiName:"SisiApi"

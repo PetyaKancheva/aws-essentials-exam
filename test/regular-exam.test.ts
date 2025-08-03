@@ -13,5 +13,5 @@ test('SQS Queue Created', () => {
     
   const template = Template.fromStack(stack);
   
-    // 
+     expect(template).toMatchSnapshot();
 });
