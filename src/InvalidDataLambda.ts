@@ -12,6 +12,8 @@ const schedulerClinet = new  SchedulerClient;
 export const handler = async ( event: SNSEvent ) => {
 
      const tableName = process.env.TABLE_NAME;
+     const role= process.env.ROLE_ARN;
+     const targetLambdaARN= process.env.DELETION_LAMBDA_ARN;
   
     const record = event.Records;
        
@@ -19,15 +21,14 @@ export const handler = async ( event: SNSEvent ) => {
    const body = JSON.stringify(record[0].Sns.Message);
     console.log(`Processed message ${body}`);
 
-   //       const {valid,value,description,buyer}=JSON.parse(message); // not required
+
 
  // put data in table
-  
- 
+
     const uuid = randomUUID();
       const now=new Date();
 
-    const timestamp  =now.toISOString();;
+    const timestamp  =now.toISOString();
 
     console.log("Custom UUID: ", uuid);
 
@@ -35,7 +36,7 @@ export const handler = async ( event: SNSEvent ) => {
         TableName: tableName,
         Item: {
             PK: {
-                S: `ITME#${uuid}`
+                S: `ITEM#${uuid}`
             },
             SK: {
                 S: `METADATA#${uuid}`
@@ -53,27 +54,34 @@ export const handler = async ( event: SNSEvent ) => {
 
     );
 
-  const afterOneDay =now.getDate()+1;
+
   
  await ddb.send(dynamoDBCommand);
 
+
+
+    const newTimeAfterDay= new Date(now);
+// for test in 2 min
+//     newTimeAfterDay.setDate(now.getDate()+1);
+    newTimeAfterDay.setMinutes(now.getMinutes()+2);
+
  // schedule event for deletion
-/*     const result =await schedulerClinet.send(new CreateScheduleCommand({
+    const result =await schedulerClinet.send(new CreateScheduleCommand({
 
         Name:'delete item',
-        ScheduleExpression:`at${afterOneDay}`,
+        ScheduleExpression:`at${newTimeAfterDay.toISOString()}`,
         Target:{
-            Arn:
-            Input: JSON.stringify(`ITME#${uuid}`)
-
+            Arn:targetLambdaARN,
+            Input: JSON.stringify(`ITEM#${uuid}`),
+            RoleArn:  role,
         },
         FlexibleTimeWindow: {
             Mode:"OFF"
         }
-      
+
     }));
-    
-    console.log(result); */
+
+    console.log(result);
 }
 
     
