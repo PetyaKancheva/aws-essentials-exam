@@ -12,8 +12,7 @@ const schedulerClinet = new  SchedulerClient;
 export const handler = async ( event: SNSEvent ) => {
 
      const tableName = process.env.TABLE_NAME;
-     const role= process.env.ROLE_ARN;
-     const targetLambdaARN= process.env.DELETION_LAMBDA_ARN;
+
   
     const record = event.Records;
        
@@ -30,7 +29,21 @@ export const handler = async ( event: SNSEvent ) => {
 
     const timestamp  =now.toISOString();
 
-    console.log("Custom UUID: ", uuid);
+            // calculate deletion time
+
+
+
+    //  delete by 10
+    var  minutes=(Math.floor(now.getMinutes()/10)*10); //+ 20 min for testing
+    //  for test add 4 min
+            minutes+=4;
+    const hour = now.getHours();
+    //  add 1 day for normal
+    const date= now.getDate()  ;
+
+    const deletionTime = `${date} / ${hour} :${minutes}`;
+
+
 
     const dynamoDBCommand = new PutItemCommand({
         TableName: tableName,
@@ -47,43 +60,17 @@ export const handler = async ( event: SNSEvent ) => {
             body: {
                S: body
             },     
-             
+            deletionTime:{
+                S:deletionTime
+            }
         },
-        ReturnConsumedCapacity: "TOTAL",
     }
 
     );
 
-
-  
  await ddb.send(dynamoDBCommand);
 
 
-
-    const newTimeAfterDay= new Date(now);
-// for test in 2 min
-//     newTimeAfterDay.setDate(now.getDate()+1);
-    newTimeAfterDay.setMinutes(now.getMinutes()+2);
-    //"2025-08-09T06:56:27"
-   const  isoTIM = newTimeAfterDay.toISOString().slice(0,19);
-
- // schedule event for deletion
-    const result =await schedulerClinet.send(new CreateScheduleCommand({
-
-        Name:`delete-item-${uuid}`,
-        ScheduleExpression: `at(${isoTIM})`,
-        Target:{
-            Arn:targetLambdaARN,
-            Input: JSON.stringify(`ITEM#${uuid}`),
-            RoleArn:  role,
-        },
-        FlexibleTimeWindow: {
-            Mode:"OFF"
-        }
-
-    }));
-
-    console.log(result);
 }
 
     

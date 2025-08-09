@@ -8,7 +8,10 @@ import {LambdaSubscription} from 'aws-cdk-lib/aws-sns-subscriptions';
 import {Endpoint} from 'aws-sdk';
 import {Construct} from 'constructs';
 import {BaseFunction} from "./functions";
-import {AccountPrincipal, Effect, PolicyStatement, PrincipalBase, ServicePrincipal} from 'aws-cdk-lib/aws-iam';
+import { Role, ServicePrincipal} from 'aws-cdk-lib/aws-iam';
+import { Rule, Schedule } from "aws-cdk-lib/aws-events";
+import { LambdaFunction } from "aws-cdk-lib/aws-events-targets";
+import { EventBridgeSchedulerTarget } from "aws-cdk-lib/aws-stepfunctions-tasks";
 
 // import * as sqs from 'aws-cdk-lib/aws-sqs';
 
@@ -29,9 +32,14 @@ export class RegularExamStack extends Stack {
                 name: "SK",
                 type: AttributeType.STRING
             }
-
         });
 
+const indexName= "deletion-index" ;
+        table.addGlobalSecondaryIndex({
+            indexName: indexName,
+            partitionKey: {
+                name: 'deletionTime', type:  AttributeType.STRING },
+        });
 
         // SNS for valid data
         const validDataTopic = new Topic(this, "ValidDataTopic");
@@ -67,6 +75,7 @@ export class RegularExamStack extends Stack {
             environment: {
                 TABLE_NAME: table.tableName,
                 DELETION_TOPIC_ARN: deletionDataTopic.topicArn,
+                INDEX_NAME:indexName,
             }
         });
 
@@ -75,44 +84,36 @@ export class RegularExamStack extends Stack {
         const invalidDataLambda = new BaseFunction(this, "InvalidDataLambda", {
             environment: {
                 TABLE_NAME: table.tableName,
-                DELETION_LAMBDA_ARN: deletionLambda.functionArn,
             }
         });
-        //
-        // // ad policy statement fior klambdy
-        // const policyStatement = new PolicyStatement({
-        //         effect:  Effect.ALLOW,
-        //         resources:["*"],
-        //         actions: ['sts:AssumeRole'],
-        //         principals: [new ServicePrincipal('scheduler.amazonaws.com')]
-        //     });
-        //
-        //
-
-        invalidDataLambda.addPermission("AllowEventBridgeInvoke",{
-            principal: new ServicePrincipal('events.amazonaws.com'),
-            action:"lambda:InvokeFunction",
-            sourceArn: `arn:aws:events:${this.region}:${this.account}:rule/*`    } );
 
 
-        invalidDataLambda.addPermission("AllowScheduleInvoke",{
-            principal: new ServicePrincipal('scheduler.amazonaws.com'),
-            action:"*",
-            sourceArn: `arn:aws:scheduler:${this.region}:${this.account}:schedule/default/*`    } );
+        // grant permission to publish topic Detletion
 
-// get lambda role and add it to environmetn
+        deletionDataTopic.grantPublish(deletionLambda);
+        //  create rule to check expiration date every 10 min
+        const rule = new Rule(this, 'ScheduleItemDeletionRule', {
+            schedule: Schedule.cron({minute: '*/2'}),
+        });
 
-        const invalidLambdaAssumedRoleRN = invalidDataLambda.role?.roleArn;
-        invalidDataLambda.addEnvironment("ROLE_ARN", invalidLambdaAssumedRoleRN!);
+        rule.addTarget(new LambdaFunction(deletionLambda));
+
+        // create role for the AWS service
+        const role = new Role(this, 'EventsRole', {
+            assumedBy: new ServicePrincipal('events.amazonaws.com'),
+        });
+        new EventBridgeSchedulerTarget({
+            arn: deletionLambda.functionArn,
+            role: role
+        });
 
         invalidDataTopic.addSubscription(new LambdaSubscription(invalidDataLambda));
 
         // grant permission to lambda for table
-        table.grantFullAccess(invalidDataLambda);
-
+        table.grantWriteData(invalidDataLambda);
 
         // grant permission to lambda for table
-        table.grantWriteData(deletionLambda);
+        table.grantReadWriteData(deletionLambda);
 
         // API with resource and  post method
         const sisiApi = new RestApi(this, "SisiApi", {

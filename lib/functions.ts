@@ -9,7 +9,7 @@ interface BaseFunctionProps {
         INVALID_TOPIC_ARN?: string,
         TABLE_NAME?:string,
         DELETION_TOPIC_ARN?:string,
-        DELETION_LAMBDA_ARN?:string
+        INDEX_NAME?:string
 
     }
 }
