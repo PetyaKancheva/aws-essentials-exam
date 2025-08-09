@@ -8,7 +8,7 @@ import {LambdaSubscription} from 'aws-cdk-lib/aws-sns-subscriptions';
 import {Endpoint} from 'aws-sdk';
 import {Construct} from 'constructs';
 import {BaseFunction} from "./functions";
-import {Effect, PolicyStatement} from 'aws-cdk-lib/aws-iam';
+import {AccountPrincipal, Effect, PolicyStatement, PrincipalBase, ServicePrincipal} from 'aws-cdk-lib/aws-iam';
 
 // import * as sqs from 'aws-cdk-lib/aws-sqs';
 
@@ -20,7 +20,7 @@ export class RegularExamStack extends Stack {
         const email = "pe_kan@posteo.com"
 
         // table
-        const table = new Table(this, "SisiTable", {
+        const table = new Table(this, "SisiTable2", {
             partitionKey: {
                 name: "PK",
                 type: AttributeType.STRING
@@ -78,17 +78,30 @@ export class RegularExamStack extends Stack {
                 DELETION_LAMBDA_ARN: deletionLambda.functionArn,
             }
         });
+        //
+        // // ad policy statement fior klambdy
+        // const policyStatement = new PolicyStatement({
+        //         effect:  Effect.ALLOW,
+        //         resources:["*"],
+        //         actions: ['sts:AssumeRole'],
+        //         principals: [new ServicePrincipal('scheduler.amazonaws.com')]
+        //     });
+        //
+        //
 
-        // ad policy statement fior klambdy
-        const policyStatement = new PolicyStatement({
-            effect: Effect.ALLOW,
-            actions: ["*"],
-            resources: ["*"],
-        });
+        invalidDataLambda.addPermission("AllowEventBridgeInvoke",{
+            principal: new ServicePrincipal('events.amazonaws.com'),
+            action:"lambda:InvokeFunction",
+            sourceArn: `arn:aws:events:${this.region}:${this.account}:rule/*`    } );
 
 
-        invalidDataLambda.addToRolePolicy(policyStatement);
+        invalidDataLambda.addPermission("AllowScheduleInvoke",{
+            principal: new ServicePrincipal('scheduler.amazonaws.com'),
+            action:"*",
+            sourceArn: `arn:aws:scheduler:${this.region}:${this.account}:schedule/default/*`    } );
+
 // get lambda role and add it to environmetn
+
         const invalidLambdaAssumedRoleRN = invalidDataLambda.role?.roleArn;
         invalidDataLambda.addEnvironment("ROLE_ARN", invalidLambdaAssumedRoleRN!);
 

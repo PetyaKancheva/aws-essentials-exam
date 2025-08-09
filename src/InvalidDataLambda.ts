@@ -64,12 +64,14 @@ export const handler = async ( event: SNSEvent ) => {
 // for test in 2 min
 //     newTimeAfterDay.setDate(now.getDate()+1);
     newTimeAfterDay.setMinutes(now.getMinutes()+2);
+    //"2025-08-09T06:56:27"
+   const  isoTIM = newTimeAfterDay.toISOString().slice(0,19);
 
  // schedule event for deletion
     const result =await schedulerClinet.send(new CreateScheduleCommand({
 
-        Name:'delete item',
-        ScheduleExpression:`at${newTimeAfterDay.toISOString()}`,
+        Name:`delete-item-${uuid}`,
+        ScheduleExpression: `at(${isoTIM})`,
         Target:{
             Arn:targetLambdaARN,
             Input: JSON.stringify(`ITEM#${uuid}`),
