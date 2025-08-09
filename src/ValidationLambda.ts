@@ -6,7 +6,7 @@ const snsClient = new SNSClient;
 export const handler = async (event: APIGatewayProxyEvent) => {
 
         console.log(JSON.stringify(event));
-       const  validDataTopicARN = process.env.VALID_TOPIC_ARN;
+        const  validDataTopicARN = process.env.VALID_TOPIC_ARN;
         const  invalidDataTopicARN = process.env.INVALID_TOPIC_ARN;
 
         const {valid,value,description,buyer}=JSON.parse(event.body);

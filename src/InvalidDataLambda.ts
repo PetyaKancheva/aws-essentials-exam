@@ -1,4 +1,5 @@
 import { DynamoDBClient, PutItemCommand } from "@aws-sdk/client-dynamodb";
+import { CreateScheduleCommand, SchedulerClient } from "@aws-sdk/client-scheduler";
 import { PublishCommand, SNSClient, ThrottledException } from "@aws-sdk/client-sns";
 import { APIGatewayProxyEvent, SNSEvent, SNSEventRecord } from "aws-lambda"
 import { NotificationEvent } from "aws-sdk/clients/ssm";
@@ -6,10 +7,13 @@ import { randomUUID } from "crypto";
 
 const snsClient = new SNSClient;
 const ddb= new DynamoDBClient;
+const schedulerClinet = new  SchedulerClient;
 
 export const handler = async ( event: SNSEvent ) => {
 
      const tableName = process.env.TABLE_NAME;
+     const role= process.env.ROLE_ARN;
+     const targetLambdaARN= process.env.DELETION_LAMBDA_ARN;
   
     const record = event.Records;
        
@@ -17,14 +21,14 @@ export const handler = async ( event: SNSEvent ) => {
    const body = JSON.stringify(record[0].Sns.Message);
     console.log(`Processed message ${body}`);
 
-   //       const {valid,value,description,buyer}=JSON.parse(message); // not required
+
 
  // put data in table
-  
- 
-    const uuid = randomUUID();
 
-    const timestamp  =new Date().toISOString();;
+    const uuid = randomUUID();
+      const now=new Date();
+
+    const timestamp  =now.toISOString();
 
     console.log("Custom UUID: ", uuid);
 
@@ -32,7 +36,7 @@ export const handler = async ( event: SNSEvent ) => {
         TableName: tableName,
         Item: {
             PK: {
-                S: `ORDER#${uuid}`
+                S: `ITEM#${uuid}`
             },
             SK: {
                 S: `METADATA#${uuid}`
@@ -51,11 +55,35 @@ export const handler = async ( event: SNSEvent ) => {
     );
 
 
+  
  await ddb.send(dynamoDBCommand);
 
- // schedule event for deletion
 
- 
+
+    const newTimeAfterDay= new Date(now);
+// for test in 2 min
+//     newTimeAfterDay.setDate(now.getDate()+1);
+    newTimeAfterDay.setMinutes(now.getMinutes()+2);
+    //"2025-08-09T06:56:27"
+   const  isoTIM = newTimeAfterDay.toISOString().slice(0,19);
+
+ // schedule event for deletion
+    const result =await schedulerClinet.send(new CreateScheduleCommand({
+
+        Name:`delete-item-${uuid}`,
+        ScheduleExpression: `at(${isoTIM})`,
+        Target:{
+            Arn:targetLambdaARN,
+            Input: JSON.stringify(`ITEM#${uuid}`),
+            RoleArn:  role,
+        },
+        FlexibleTimeWindow: {
+            Mode:"OFF"
+        }
+
+    }));
+
+    console.log(result);
 }
 
     
