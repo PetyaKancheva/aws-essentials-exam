@@ -38,40 +38,55 @@ exports[`SQS Queue Created 1`] = `
     },
   },
   "Resources": {
-    "DataDeletionLambdaE433DFC2": {
+    "DeletionDataSubscriptionD7222694": {
+      "Properties": {
+        "Endpoint": "pe_kan@posteo.com",
+        "Protocol": "email",
+        "TopicArn": {
+          "Ref": "DeletionDataTopic1830E62A",
+        },
+      },
+      "Type": "AWS::SNS::Subscription",
+    },
+    "DeletionDataTopic1830E62A": {
+      "Type": "AWS::SNS::Topic",
+    },
+    "DeletionLambda1D7334AD": {
       "DependsOn": [
-        "DataDeletionLambdaServiceRoleDefaultPolicy2A829E19",
-        "DataDeletionLambdaServiceRole4587A192",
+        "DeletionLambdaServiceRoleDefaultPolicyA4294FEA",
+        "DeletionLambdaServiceRole1D0EE251",
       ],
       "Properties": {
         "Code": {
           "S3Bucket": {
             "Fn::Sub": "cdk-hnb659fds-assets-\${AWS::AccountId}-\${AWS::Region}",
           },
-          "S3Key": "618ddbd043edbc48b0c2acd123f299d1ea005af5822b8592f31e2a9fd626ceaa.zip",
+          "S3Key": "62725d9f50e9a1b8d9060caee2eb7d1f6bbb0c47e21f3b4f4cbe997c1b5c71e1.zip",
         },
         "Environment": {
           "Variables": {
+            "AWS_NODEJS_CONNECTION_REUSE_ENABLED": "1",
             "DELETION_TOPIC_ARN": {
               "Ref": "DeletionDataTopic1830E62A",
             },
             "TABLE_NAME": {
-              "Ref": "SisiTable19BAE780",
+              "Ref": "SisiTable230092D4A",
             },
           },
         },
         "Handler": "index.handler",
         "Role": {
           "Fn::GetAtt": [
-            "DataDeletionLambdaServiceRole4587A192",
+            "DeletionLambdaServiceRole1D0EE251",
             "Arn",
           ],
         },
-        "Runtime": "nodejs20.x",
+        "Runtime": "nodejs16.x",
+        "Timeout": 5,
       },
       "Type": "AWS::Lambda::Function",
     },
-    "DataDeletionLambdaServiceRole4587A192": {
+    "DeletionLambdaServiceRole1D0EE251": {
       "Properties": {
         "AssumeRolePolicyDocument": {
           "Statement": [
@@ -102,17 +117,23 @@ exports[`SQS Queue Created 1`] = `
       },
       "Type": "AWS::IAM::Role",
     },
-    "DataDeletionLambdaServiceRoleDefaultPolicy2A829E19": {
+    "DeletionLambdaServiceRoleDefaultPolicyA4294FEA": {
       "Properties": {
         "PolicyDocument": {
           "Statement": [
             {
-              "Action": "dynamodb:*",
+              "Action": [
+                "dynamodb:BatchWriteItem",
+                "dynamodb:PutItem",
+                "dynamodb:UpdateItem",
+                "dynamodb:DeleteItem",
+                "dynamodb:DescribeTable",
+              ],
               "Effect": "Allow",
               "Resource": [
                 {
                   "Fn::GetAtt": [
-                    "SisiTable19BAE780",
+                    "SisiTable230092D4A",
                     "Arn",
                   ],
                 },
@@ -124,27 +145,43 @@ exports[`SQS Queue Created 1`] = `
           ],
           "Version": "2012-10-17",
         },
-        "PolicyName": "DataDeletionLambdaServiceRoleDefaultPolicy2A829E19",
+        "PolicyName": "DeletionLambdaServiceRoleDefaultPolicyA4294FEA",
         "Roles": [
           {
-            "Ref": "DataDeletionLambdaServiceRole4587A192",
+            "Ref": "DeletionLambdaServiceRole1D0EE251",
           },
         ],
       },
       "Type": "AWS::IAM::Policy",
     },
-    "DeletionDataSubscriptionD7222694": {
+    "InvalidDataLambdaAllowEventBridgeInvokeDE5798A1": {
       "Properties": {
-        "Endpoint": "pe_kan@posteo.com",
-        "Protocol": "email",
-        "TopicArn": {
-          "Ref": "DeletionDataTopic1830E62A",
+        "Action": "lambda:InvokeFunction",
+        "FunctionName": {
+          "Fn::GetAtt": [
+            "InvalidDataLambdaC8276619",
+            "Arn",
+          ],
+        },
+        "Principal": "events.amazonaws.com",
+        "SourceArn": {
+          "Fn::Join": [
+            "",
+            [
+              "arn:aws:events:",
+              {
+                "Ref": "AWS::Region",
+              },
+              ":",
+              {
+                "Ref": "AWS::AccountId",
+              },
+              ":rule/*",
+            ],
+          ],
         },
       },
-      "Type": "AWS::SNS::Subscription",
-    },
-    "DeletionDataTopic1830E62A": {
-      "Type": "AWS::SNS::Topic",
+      "Type": "AWS::Lambda::Permission",
     },
     "InvalidDataLambdaAllowInvokeMyTestStackInvalidDataTopic5FCFAFB92B8D987E": {
       "Properties": {
@@ -162,6 +199,35 @@ exports[`SQS Queue Created 1`] = `
       },
       "Type": "AWS::Lambda::Permission",
     },
+    "InvalidDataLambdaAllowScheduleInvoke58678126": {
+      "Properties": {
+        "Action": "*",
+        "FunctionName": {
+          "Fn::GetAtt": [
+            "InvalidDataLambdaC8276619",
+            "Arn",
+          ],
+        },
+        "Principal": "scheduler.amazonaws.com",
+        "SourceArn": {
+          "Fn::Join": [
+            "",
+            [
+              "arn:aws:scheduler:",
+              {
+                "Ref": "AWS::Region",
+              },
+              ":",
+              {
+                "Ref": "AWS::AccountId",
+              },
+              ":schedule/default/*",
+            ],
+          ],
+        },
+      },
+      "Type": "AWS::Lambda::Permission",
+    },
     "InvalidDataLambdaC8276619": {
       "DependsOn": [
         "InvalidDataLambdaServiceRoleDefaultPolicy7BF3ED52",
@@ -172,12 +238,25 @@ exports[`SQS Queue Created 1`] = `
           "S3Bucket": {
             "Fn::Sub": "cdk-hnb659fds-assets-\${AWS::AccountId}-\${AWS::Region}",
           },
-          "S3Key": "cc209541cba31b0267b1efdf365eb91e865e22b5b2f49791c231d9f201d17545.zip",
+          "S3Key": "3c17138fbdf1943c07240fb49e4b70321b46f5d61f4aab62c06c2602862d73dc.zip",
         },
         "Environment": {
           "Variables": {
+            "AWS_NODEJS_CONNECTION_REUSE_ENABLED": "1",
+            "DELETION_LAMBDA_ARN": {
+              "Fn::GetAtt": [
+                "DeletionLambda1D7334AD",
+                "Arn",
+              ],
+            },
+            "ROLE_ARN": {
+              "Fn::GetAtt": [
+                "InvalidDataLambdaServiceRole1ADB9591",
+                "Arn",
+              ],
+            },
             "TABLE_NAME": {
-              "Ref": "SisiTable19BAE780",
+              "Ref": "SisiTable230092D4A",
             },
           },
         },
@@ -188,7 +267,8 @@ exports[`SQS Queue Created 1`] = `
             "Arn",
           ],
         },
-        "Runtime": "nodejs20.x",
+        "Runtime": "nodejs16.x",
+        "Timeout": 5,
       },
       "Type": "AWS::Lambda::Function",
     },
@@ -248,7 +328,7 @@ exports[`SQS Queue Created 1`] = `
               "Resource": [
                 {
                   "Fn::GetAtt": [
-                    "SisiTable19BAE780",
+                    "SisiTable230092D4A",
                     "Arn",
                   ],
                 },
@@ -491,7 +571,7 @@ exports[`SQS Queue Created 1`] = `
       },
       "Type": "AWS::Lambda::Permission",
     },
-    "SisiTable19BAE780": {
+    "SisiTable230092D4A": {
       "DeletionPolicy": "Retain",
       "Properties": {
         "AttributeDefinitions": [
@@ -545,10 +625,11 @@ exports[`SQS Queue Created 1`] = `
           "S3Bucket": {
             "Fn::Sub": "cdk-hnb659fds-assets-\${AWS::AccountId}-\${AWS::Region}",
           },
-          "S3Key": "0755b568fa04c16a1d767f901fcd39a580a76e6a2f8ecb7df9cb2aa85e81f4b6.zip",
+          "S3Key": "8acd953f85ee4a4fddb2c3d3d7f5c249ef685f7e8f9918de1633a8cdd7cf378b.zip",
         },
         "Environment": {
           "Variables": {
+            "AWS_NODEJS_CONNECTION_REUSE_ENABLED": "1",
             "INVALID_TOPIC_ARN": {
               "Ref": "InvalidDataTopicF8A94006",
             },
@@ -564,7 +645,8 @@ exports[`SQS Queue Created 1`] = `
             "Arn",
           ],
         },
-        "Runtime": "nodejs20.x",
+        "Runtime": "nodejs16.x",
+        "Timeout": 5,
       },
       "Type": "AWS::Lambda::Function",
     },
